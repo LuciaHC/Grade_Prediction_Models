@@ -1,50 +1,67 @@
-# 📌 Proyecto Final:  Aprendizaje Automático
+# 📌 Final Project: Machine Learning  
 
-## 📅 Fecha: [04/05/2025]  
-**Autor:** Lucía Herraiz Cano 
-**Asignatura:** Aprendizaje Automático
+## 📅 Date: [04/05/2025]  
+**Author:** Lucía Herraiz Cano  
 
----
+---  
 
-## 📖 Introducción  
-[Breve descripción del proyecto. Explica el propósito, la problemática que resuelve y su importancia.]  
+## 📖 Introduction  
 
----
+This repository contains two predictive models designed to estimate students' grades in two educational institutions, considering a series of determining factors and analyzing which ones are most relevant.  
 
-## 📂 Contenido  
-1. [🔹] [Descripción General](#descripción-general)  
-2. [📌] [Tecnologías Utilizadas](#tecnologías-utilizadas)  
-3. [⚙️] [Instalación y Ejecución](#instalación-y-ejecución)  
-4. [📊] [Metodología](#metodología)  
-5. [🚀] [Resultados y Conclusiones](#resultados-y-conclusiones)  
-6. [📜] [Referencias](#referencias)  
+---  
 
----
+## 📂 Contents  
+1. [🔹] [General Description](#general-description)  
+2. [⚙️] [Installation and Execution](#installation-and-execution)  
+3. [🚀] [Results and Conclusions](#results-and-conclusions)  
+4. [📜] [References](#references)  
 
-## 🔹 Descripción General  
-[Explica en detalle qué hace el proyecto, sus funcionalidades principales y cómo se usa.]  
+---  
 
----
+## 🔹 General Description  
 
-## 📌 Tecnologías Utilizadas  
-- Lenguaje(s) de programación: [Ej. Python, JavaScript, C++]  
-- Frameworks/Bibliotecas: [Ej. Flask, React, TensorFlow]  
-- Base de datos: [Ej. MySQL, PostgreSQL, MongoDB]  
-- Herramientas adicionales: [Ej. Docker, Git, Jupyter Notebook]  
+This project develops predictive models to analyze the factors influencing students' academic performance in two high schools in Madrid in 2005. Using demographic, social, and academic data, two models are built: one that includes previous grades and another that excludes these values to assess the influence of other factors. The objective is to understand which variables have the most impact on the final grade and explore strategies to improve student performance.  
 
----
+---  
 
-## ⚙️ Instalación y Ejecución  
-### 🚀 Requisitos Previos  
-[Aquí se indican los requisitos necesarios para ejecutar el proyecto, como dependencias o configuraciones.]  
+## ⚙️ Installation and Execution  
 
-### 🔧 Instalación  
+### 🚀 Prerequisites  
+
+**Compatible operating system:** Windows, macOS, or Linux.  
+
+**Required software:**  
+- Visual Studio Code (optional but recommended).  
+- Git installed and configured.  
+- Python.  
+
+**Specific dependencies:** Check the *requirements.txt* file to install the necessary packages.  
+
+**Access paths:** Access paths and other parameters can be configured in the *configuration.ini* file.  
+
+### 🔧 Installation Steps  
+
 ```bash
-# Clonar el repositorio
-git clone [URL_DEL_REPO]
+# Clone the repository
+git clone https://github.com/LuciaHC/Grade_Prediction_Models.git  
 
-# Moverse al directorio del proyecto
-cd [NOMBRE_DEL_PROYECTO]
+# Navigate to the src folder
+cd src/  
 
-# Instalar dependencias
-[Ejemplo: pip install -r requirements.txt]
+# Install dependencies
+pip install -r requirements.txt  
+
+# Run the environment
+python main.py  
+
+---
+
+## 📊 Results and Conclusions
+
+All of the results and the conclusions of this proyect can be consulted in the document *Informe.pdf*
+
+
+---
+## 📜 References
+
