@@ -1,11 +1,18 @@
 import numpy as np
 from sklearn.metrics import accuracy_score, r2_score
+import pandas as pd
+from sklearn.preprocessing import LabelBinarizer
 
 
 class LogisticRegressor:
     def __init__(self,learning_rate = 0.01,penalty = None):
         """
         Initializes the Logistic Regressor model.
+
+        Args:
+        - learning_rate (float): The step size at each iteration while moving toward a minimum of the
+                            loss function.
+        - penalty (str): Type of regularization (None, 'lasso', 'ridge', 'elasticnet'). Default is None.
 
         Attributes:
         - weights (np.ndarray): A placeholder for the weights of the model.
@@ -40,10 +47,7 @@ class LogisticRegressor:
         - X (np.ndarray): The input features, with shape (m, n), where m is the number of examples and n is
                             the number of features.
         - y (np.ndarray): The true labels of the data, with shape (m,).
-        - learning_rate (float): The step size at each iteration while moving toward a minimum of the
-                            loss function.
         - num_iterations (int): The number of iterations for which the optimization algorithm should run.
-        - penalty (str): Type of regularization (None, 'lasso', 'ridge', 'elasticnet'). Default is None.
         - l1_ratio (float): The Elastic Net mixing parameter, with 0 <= l1_ratio <= 1.
                             l1_ratio=0 corresponds to L2 penalty,
                             l1_ratio=1 to L1. Only used if penalty='elasticnet'.
@@ -53,29 +57,43 @@ class LogisticRegressor:
         - verbose (bool): Print loss every print_every iterations.
         - print_every (int): Period of number of iterations to show the loss.
 
-
-
         Updates:
         - self.weights: The weights of the model after training.
         - self.bias: The bias of the model after training.
         """
-        m = X.shape[0]
-        n = X.shape[1]
 
-        self.weights = np.zeros(n)
-        self.bias = 0
+        if isinstance(X, pd.DataFrame):
+            X = X.values
+        X = np.asarray(X, dtype=np.float64)
+
+        if isinstance(y, pd.Series):
+            y = y.values
+        y = np.asarray(y, dtype=np.float64).flatten()
+
+        m, n = X.shape
+        self.classes = np.unique(y)
+        n_classes = len(self.classes)
+
+        # Encode the classes of the target variablee
+        lb = LabelBinarizer()
+        Y = lb.fit_transform(y)
+
+
+        self.weights = np.zeros((n_classes, n))
+        self.bias = np.zeros(n_classes)
 
         for i in range(num_iterations): 
             y_hat = self.predict_proba(X)
             # Compute loss
-            loss = self.log_likelihood(y, y_hat)
+            loss = self.log_likelihood(Y, y_hat)
+            error = y_hat - Y
 
             # Logging
             if i % print_every == 0 and verbose:
                 print(f"Iteration {i}: Loss {loss}")
 
-            dw = (-1/m)*np.dot((y-y_hat),X)  # Derivative w.r.t. the coefficients
-            db = (-1/m)*sum(y-y_hat)# Derivative w.r.t. the intercept
+            dw = (1 / m) * np.dot(error.T, X)  # shape: (k, n)
+            db = (1 / m) * np.sum(error, axis=0)  # shape: (k,)
 
             if self.penalty == "lasso":
                 dw = self.lasso_regularization(dw, m, C)
@@ -99,26 +117,29 @@ class LogisticRegressor:
         Returns:
         - A numpy array of shape (m, 1) containing the probability of the positive class for each sample.
         """
-        z = self.bias + np.dot(X, self.weights)
-        return np.array(self.sigmoid(z))
+        z = self.bias + np.dot(X, self.weights.T)
+        return self.softmax(z)
 
-    def predict(self, X, threshold=0.5):
+    def softmax(self, z):
+        z = z - np.max(z, axis=1, keepdims=True)  # numerical stability
+        exp_z = np.exp(z.astype(float))
+        return exp_z / np.sum(exp_z, axis=1, keepdims=True)
+
+    def predict(self, X):
         """
         Predicts class labels for samples in X.
 
         Parameters:
         - X (np.ndarray): The input features, with shape (m, n), where m is the number of samples and n
                             is the number of features.
-        - threshold (float): Threshold used to convert probabilities into binary class labels.
-                             Defaults to 0.5.
 
         Returns:
         - A numpy array of shape (m,) containing the class label (0 or 1) for each sample.
         """
         probabilities = self.predict_proba(X)
-        classification_result = [1 if p >= threshold else 0 for p in probabilities]
+        predictions = np.argmax(probabilities, axis=1)
 
-        return np.array(classification_result)
+        return self.classes[predictions]
 
     def lasso_regularization(self, dw, m, C):
         """
@@ -201,16 +222,7 @@ class LogisticRegressor:
         Computes the Log-Likelihood loss for logistic regression, which is equivalent to
         computing the cross-entropy loss between the true labels and predicted probabilities.
         This loss function is used to measure how well the model predicts the actual class
-        labels. The formula for the loss is:
-
-        L(y, y_hat) = -(1/m) * sum(y * log(y_hat) + (1 - y) * log(1 - y_hat))
-
-        where:
-        - L(y, y_hat) is the loss function,
-        - m is the number of observations,
-        - y is the actual label of the observation,
-        - y_hat is the predicted probability that the observation is of the positive class,
-        - log is the natural logarithm.
+        labels. 
 
         Parameters:
         - y (np.ndarray): The true labels of the data. Should be a 1D array of binary values (0 or 1).
@@ -220,10 +232,11 @@ class LogisticRegressor:
         Returns:
         - The computed loss value as a scalar.
         """
-        m = y.shape[0]  # Number of examples
-        loss = -(1/m) * sum(y * np.log(y_hat) + (1 - y)*np.log(1 - y_hat))
+        m = y.shape[0]
+        y_hat = np.clip(y_hat, 1e-15, 1 - 1e-15)
+        log_likelihood = -np.sum(y * np.log(y_hat)) / m
 
-        return loss
+        return log_likelihood
 
     @staticmethod
     def sigmoid(z):
@@ -239,7 +252,7 @@ class LogisticRegressor:
         Returns:
         - The sigmoid of z.
         """
-        sigmoid_value = 1/(1 + np.exp(-z))
+        sigmoid_value = 1/(1 + np.exp(-z.astype(float)))
         return sigmoid_value
     
     def score(self,X,y,sample_weights=None):
@@ -251,7 +264,7 @@ class LogisticRegressor:
             sample_weights (arra-like, optional): Sample weights. Defaults to None.
         """        
         y_pred = self.predict(X)
-        return r2_score(y, y_pred, sample_weight=sample_weights)
+        return accuracy_score(y, y_pred, sample_weight=sample_weights)
 
 
 class LinearRegressor:

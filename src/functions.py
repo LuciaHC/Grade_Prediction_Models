@@ -6,6 +6,11 @@ import scipy.stats as stats
 import seaborn as sns
 import os
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from scipy.stats import mode
+from sklearn.tree import DecisionTreeRegressor, export_graphviz, DecisionTreeClassifier
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score, confusion_matrix,
+    mean_absolute_error, mean_squared_error, r2_score)
  
 config = configparser.ConfigParser()
 config.read('configuration.ini')
@@ -72,8 +77,14 @@ def data_cleaning_pipeline(rescale_data=True):
 
     df_train['faltas'] = df_train['faltas'].clip(0,150)
     df_train = df_train.dropna(subset = ['TiempoEstudio', 'RelFam','AlcSem'])
-    for column in ['Medu', 'Pedu']:
-        df_train[column] = df_train[column].fillna(value=df_train[column].mode()[0])
+    # for column in ['Medu', 'Pedu']:
+    #     df_train[column] = df_train[column].fillna(value=df_train[column].mode()[0])
+
+    from sklearn.experimental import enable_iterative_imputer
+    from sklearn.impute import IterativeImputer
+
+    imp = IterativeImputer(max_iter=10, random_state=0)
+    df_train[["Medu", "Pedu"]] = imp.fit_transform(df_train[["Medu", "Pedu"]])
 
     df_train_cat = pd.get_dummies(df_train,columns=categorical_vars,drop_first=True)
     df_test_cat = pd.get_dummies(df_test,columns=categorical_vars,drop_first=True)
@@ -181,8 +192,11 @@ def evaluate_classification_metrics(y_true, y_pred, positive_label):
     }
 
 def inverse_scale_T3(scaler,predictions):
-    mean = scaler.mean_[11]
-    scale = scaler.scale_[11]
+    if isinstance(predictions, np.ndarray):
+        predictions = pd.Series(predictions)
+
+    mean = scaler.mean_
+    scale = scaler.scale_
 
     original_col = predictions * scale + mean
     return original_col
@@ -228,3 +242,135 @@ def plot_residuals_color(X, y, predictions,columns_to_plot,categorical_var=None)
 
     plt.tight_layout()
     plt.show()
+
+def evaluate_classification_metrics(y_true, y_pred):
+    """
+    Calculate various evaluation metrics for a classification model.
+
+    Args:
+        y_true (array-like): True labels of the data.
+        y_pred (array-like): Predicted labels by the model.
+
+    Returns:
+        dict: A dictionary containing various evaluation metrics.
+    """
+    return {
+        "Accuracy": accuracy_score(y_true, y_pred),
+        "Precision": precision_score(y_true, y_pred, average='weighted', zero_division=0),
+        "Recall": recall_score(y_true, y_pred, average='weighted', zero_division=0),
+        "F1 Score": f1_score(y_true, y_pred, average='weighted'),
+    }
+
+def evaluate_regression_metrics(y_true, y_pred):
+    """
+    Calculate various evaluation metrics for a regression model.
+
+    Args:
+        y_true (array-like): True labels of the data.
+        y_pred (array-like): Predicted labels by the model.
+
+    Returns:
+        dict: A dictionary containing various evaluation metrics.
+    """
+    return {
+        "Mean Absolute Error:": mean_absolute_error(y_true, y_pred),
+        "Mean Squared Error:": mean_squared_error(y_true, y_pred),
+        "R² Score:": r2_score(y_true, y_pred),
+    }
+
+
+def manual_bagging(X_train, y_train, X_test, y_test, n_estimators, max_samples, tipo):
+    """
+    Manually implements a bagging ensemble using decision trees for classification or regression.
+
+    Parameters:
+        X_train (pd.DataFrame): Training features
+        y_train (pd.Series): Training target
+        X_test (pd.DataFrame): Test features
+        y_test (pd.Series): True test target
+        n_estimators (int): Number of trees
+        max_samples (float): Proportion of bootstrap samples
+        tipo (str): 'clas' for classification or 'reg' for regression
+
+    Returns:
+        final_predictions (np.ndarray): Aggregated predictions on test set
+        score (dict): Evaluation metrics (custom function defined separately)
+    """
+    predictions = []
+    for _ in range(n_estimators):
+
+        # Create a bootstrap sample
+        n_samples = int(max_samples * len(X_train))
+        sample_indices = np.random.choice(len(X_train), size=n_samples, replace=True)
+        X_bootstrap = X_train.iloc[sample_indices]
+        y_bootstrap = y_train.iloc[sample_indices]
+
+        if tipo == 'clas':
+            model = DecisionTreeClassifier()
+        elif tipo == 'reg':
+            model = DecisionTreeRegressor()
+        else:
+            raise ValueError("Parameter 'tipo' must be 'clas' or 'reg'.")
+            
+        model.fit(X_bootstrap, y_bootstrap)
+        y_pred = model.predict(X_test) 
+        predictions.append(y_pred)
+
+    combined_predictions = np.array(predictions)
+    if tipo == 'clas':
+        majority_vote, _ = mode(combined_predictions, axis=0, keepdims=False)
+        score = evaluate_classification_metrics(y_test,majority_vote)
+    else:
+        majority_vote = np.mean(combined_predictions,axis = 0) 
+        score = evaluate_regression_metrics(y_test,majority_vote)
+
+    return majority_vote, score
+
+def manual_Random_Forest(X_train, y_train, X_test, y_test, n_estimators=10, max_samples=0.8, max_features=0.8, tipo='clas'):
+    """
+    Manually implements a Random Forest ensemble using decision trees for classification or regression.
+
+    Parameters:
+        X_train (pd.DataFrame): Training features
+        y_train (pd.Series): Training target
+        X_test (pd.DataFrame): Test features
+        y_test (pd.Series): True test target
+        n_estimators (int): Number of trees
+        max_samples (float): Proportion of bootstrap samples
+        max_features (float): Proportion of features to use for each tree
+        tipo (str): 'clas' for classification or 'reg' for regression
+
+    Returns:
+        final_predictions (np.ndarray): Aggregated predictions on test set
+        score (dict): Evaluation metrics (custom function defined separately)
+    """
+    predictions = []
+    n_total_samples = len(X_train)
+    n_total_features = X_train.shape[1]
+    max_features_int = int(max_features * n_total_features)
+
+    for _ in range(n_estimators):
+        sample_indices = np.random.choice(n_total_samples, size=int(max_samples * n_total_samples), replace=True)
+        X_bootstrap = X_train.iloc[sample_indices]
+        y_bootstrap = y_train.iloc[sample_indices]
+
+        if tipo == 'clas':
+            model = DecisionTreeClassifier(max_features=max_features_int)
+        elif tipo == 'reg':
+            model = DecisionTreeRegressor(max_features=max_features_int)
+        else:
+            raise ValueError("Parameter 'tipo' must be 'clas' or 'reg'.")
+
+        model.fit(X_bootstrap, y_bootstrap)
+        y_pred = model.predict(X_test)
+        predictions.append(y_pred)
+
+    combined_predictions = np.array(predictions)
+    if tipo == 'clas':
+        majority_vote, _ = mode(combined_predictions, axis=0, keepdims=False)
+        score = evaluate_classification_metrics(y_test,majority_vote)
+    else:
+        majority_vote = np.mean(combined_predictions,axis = 0) 
+        score = evaluate_regression_metrics(y_test,majority_vote)
+
+    return majority_vote, score
