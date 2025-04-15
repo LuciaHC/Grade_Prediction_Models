@@ -11,31 +11,22 @@ from sklearn.tree import DecisionTreeRegressor, export_graphviz, DecisionTreeCla
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score, confusion_matrix,
     mean_absolute_error, mean_squared_error, r2_score)
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
  
 config = configparser.ConfigParser()
 config.read('configuration.ini')
-
 
 
 def final_predictions_csv(file,model1_predictions, model2_predictions):
     submission = pd.DataFrame({'Modelo_i': model1_predictions,'Modelo_ii': model2_predictions})
     submission.to_csv(file, index=False)
 
-# def standarize_numerical_variables(df_train_cat, df_test_cat,numerical_vars):
-#     scaler = StandardScaler()
-
-#     # Scale only numerical columns
-#     X_train_scaled = pd.DataFrame(scaler.fit_transform(df_train_cat[numerical_vars]), columns=numerical_vars, index=df_train_cat.index)
-#     X_test_scaled = pd.DataFrame(scaler.transform(df_test_cat[numerical_vars]), columns=numerical_vars, index=df_test_cat.index)
-
-#     # Concatenate scaled numerical features with original categorical features
-#     X_train_final = pd.concat([df_train_cat.drop(numerical_vars, axis=1), X_train_scaled], axis=1)
-#     X_test_final = pd.concat([df_test_cat.drop(numerical_vars, axis=1), X_test_scaled], axis=1)
-
-#     return X_train_final, X_test_final, scaler
-
-def standarize_numerical_variables(X_train, X_test, y_train, y_test):
-    numerical_vars = ['edad','suspensos','RelFam','TiempoLib','Medu','Pedu','TiempoViaje','TiempoEstudio','SalAm','AlcSem','AlcFin','salud','faltas','T1','T2']
+def standarize_numerical_variables(X_train, X_test, y_train, y_test,model):
+    if model == 1:
+        numerical_vars = ['edad','suspensos','RelFam','TiempoLib','Medu','Pedu','TiempoViaje','TiempoEstudio','SalAm','AlcSem','AlcFin','salud','faltas','T1','T2']
+    else:
+        numerical_vars = ['edad','suspensos','RelFam','TiempoLib','Medu','Pedu','TiempoViaje','TiempoEstudio','SalAm','AlcSem','AlcFin','salud','faltas']
 
     scaler_X = StandardScaler()
     X_train_scaled = X_train.copy()
@@ -63,7 +54,7 @@ def standarize_numerical_variables(X_train, X_test, y_train, y_test):
 
     return X_train_scaled, X_test_scaled, y_train_scaled,y_test_scaled,scaler_y
 
-def data_cleaning_pipeline(rescale_data=True):
+def data_cleaning_pipeline():
     numerical_vars = ['edad','suspensos','RelFam','TiempoLib','Medu','Pedu','TiempoViaje','TiempoEstudio','SalAm','AlcSem','AlcFin','salud','faltas','T1','T2','T3']
     categorical_vars = ['escuela','sexo','entorno','TamFam','EstPadres','Mtrab','Ptrab','razon', 'tutor','apoyo','ApFam', 'academia', 'extras', 'enfermeria', 'EstSup', 'internet', 'pareja','asignatura']
 
@@ -80,8 +71,6 @@ def data_cleaning_pipeline(rescale_data=True):
     # for column in ['Medu', 'Pedu']:
     #     df_train[column] = df_train[column].fillna(value=df_train[column].mode()[0])
 
-    from sklearn.experimental import enable_iterative_imputer
-    from sklearn.impute import IterativeImputer
 
     imp = IterativeImputer(max_iter=10, random_state=0)
     df_train[["Medu", "Pedu"]] = imp.fit_transform(df_train[["Medu", "Pedu"]])
@@ -243,41 +232,46 @@ def plot_residuals_color(X, y, predictions,columns_to_plot,categorical_var=None)
     plt.tight_layout()
     plt.show()
 
-def evaluate_classification_metrics(y_true, y_pred):
+def evaluate_classification_metrics(y_test, y_train, y_pred_test, y_pred_train):
     """
     Calculate various evaluation metrics for a classification model.
 
     Args:
-        y_true (array-like): True labels of the data.
-        y_pred (array-like): Predicted labels by the model.
+        y_test (array-like): True labels of the data (test).
+        y_traim (array-like): True labels of the data (train).
+        y_pred_test (array-like): Predicted labels by the model with X_test.
+        y_pred_train (array-like): Predicted labels by the model with X_train.
 
     Returns:
         dict: A dictionary containing various evaluation metrics.
     """
     return {
-        "Accuracy": accuracy_score(y_true, y_pred),
-        "Precision": precision_score(y_true, y_pred, average='weighted', zero_division=0),
-        "Recall": recall_score(y_true, y_pred, average='weighted', zero_division=0),
-        "F1 Score": f1_score(y_true, y_pred, average='weighted'),
+        "Accuracy Test": accuracy_score(y_test, y_pred_test),
+        "Precision": precision_score(y_test, y_pred_test, average='weighted', zero_division=0),
+        "Recall": recall_score(y_test, y_pred_test, average='weighted', zero_division=0),
+        "F1 Score": f1_score(y_test, y_pred_test, average='weighted'),
+        "Accuracy Train": accuracy_score(y_train,y_pred_train),
     }
 
-def evaluate_regression_metrics(y_true, y_pred):
+def evaluate_regression_metrics(y_test,y_train, y_pred, y_pred_train):
     """
     Calculate various evaluation metrics for a regression model.
 
     Args:
-        y_true (array-like): True labels of the data.
-        y_pred (array-like): Predicted labels by the model.
+        y_test (array-like): True labels of the data (test).
+        y_traim (array-like): True labels of the data (train).
+        y_pred (array-like): Predicted labels by the model with X_test.
+        y_pred_train (array-like): Predicted labels by the model with X_train.
 
     Returns:
         dict: A dictionary containing various evaluation metrics.
     """
     return {
-        "Mean Absolute Error:": mean_absolute_error(y_true, y_pred),
-        "Mean Squared Error:": mean_squared_error(y_true, y_pred),
-        "R² Score:": r2_score(y_true, y_pred),
+        "Mean Absolute Error:": mean_absolute_error(y_test, y_pred),
+        "Mean Squared Error:": mean_squared_error(y_test, y_pred),
+        "R² Score Test:": r2_score(y_test, y_pred),
+        "R² Score Train:": r2_score(y_train, y_pred_train),
     }
-
 
 def manual_bagging(X_train, y_train, X_test, y_test, n_estimators, max_samples, tipo):
     """
@@ -297,6 +291,7 @@ def manual_bagging(X_train, y_train, X_test, y_test, n_estimators, max_samples, 
         score (dict): Evaluation metrics (custom function defined separately)
     """
     predictions = []
+    predictions_train = []
     for _ in range(n_estimators):
 
         # Create a bootstrap sample
@@ -315,14 +310,19 @@ def manual_bagging(X_train, y_train, X_test, y_test, n_estimators, max_samples, 
         model.fit(X_bootstrap, y_bootstrap)
         y_pred = model.predict(X_test) 
         predictions.append(y_pred)
+        y_pred_train = model.predict(X_train) 
+        predictions_train.append(y_pred_train)
 
     combined_predictions = np.array(predictions)
+    combined_predictions_train = np.array(predictions_train)
     if tipo == 'clas':
         majority_vote, _ = mode(combined_predictions, axis=0, keepdims=False)
-        score = evaluate_classification_metrics(y_test,majority_vote)
+        majority_vote_train, _ = mode(combined_predictions_train, axis=0, keepdims=False)
+        score = evaluate_classification_metrics(y_test,y_train, majority_vote, majority_vote_train)
     else:
         majority_vote = np.mean(combined_predictions,axis = 0) 
-        score = evaluate_regression_metrics(y_test,majority_vote)
+        majority_vote_train = np.mean(combined_predictions_train, axis=0)
+        score = evaluate_regression_metrics(y_test,y_train, majority_vote, majority_vote_train)
 
     return majority_vote, score
 
@@ -345,6 +345,7 @@ def manual_Random_Forest(X_train, y_train, X_test, y_test, n_estimators=10, max_
         score (dict): Evaluation metrics (custom function defined separately)
     """
     predictions = []
+    predictions_train = []
     n_total_samples = len(X_train)
     n_total_features = X_train.shape[1]
     max_features_int = int(max_features * n_total_features)
@@ -364,13 +365,18 @@ def manual_Random_Forest(X_train, y_train, X_test, y_test, n_estimators=10, max_
         model.fit(X_bootstrap, y_bootstrap)
         y_pred = model.predict(X_test)
         predictions.append(y_pred)
+        y_pred_train = model.predict(X_train)
+        predictions_train.append(y_pred_train)
 
     combined_predictions = np.array(predictions)
+    combined_predictions_train = np.array(predictions_train)
     if tipo == 'clas':
         majority_vote, _ = mode(combined_predictions, axis=0, keepdims=False)
-        score = evaluate_classification_metrics(y_test,majority_vote)
+        majority_vote_train, _ = mode(combined_predictions_train, axis=0, keepdims=False)
+        score = evaluate_classification_metrics(y_test,y_train,majority_vote,majority_vote_train)
     else:
         majority_vote = np.mean(combined_predictions,axis = 0) 
-        score = evaluate_regression_metrics(y_test,majority_vote)
+        majority_vote_train = np.mean(combined_predictions_train,axis = 0) 
+        score = evaluate_regression_metrics(y_test,y_train,majority_vote, majority_vote_train)
 
     return majority_vote, score

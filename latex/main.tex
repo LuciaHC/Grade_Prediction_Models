@@ -313,18 +313,21 @@ This package was used to typeset Table~\ref{sample-table}.
 
 
 \begin{table}
-  \caption{Sample table title}
+  \caption{Modelos de regresión}
   \label{sample-table}
   \centering
-  \begin{tabular}{lll}
+  \begin{tabular}{lccc}
     \toprule
-    \multicolumn{2}{c}{Part}                   \\
-    \cmidrule(r){1-2}
-    Name     & Description     & Size ($\mu$m) \\
+    \multicolumn{4}{c}{Comparativa entre modelos} \\
+    \cmidrule(r){1-4}
+    Nombre     & MAE     & MSE    & R² Score \\
     \midrule
-    Dendrite & Input terminal  & $\sim$100     \\
-    Axon     & Output terminal & $\sim$10      \\
-    Soma     & Cell body       & up to $10^6$  \\
+    Linear Regression & 0.24 & 0.147 & 0.843 \\
+    Ensemble of RL    & 0.24 & 0.147 & 0.842 \\
+    Stack    & 0.84 & 2.0 & 0.863 \\
+    Bagging    & 0.81 & 1.79 & 0.878 \\
+    Random Forest     & 0.82 & 1.71 & 0.883 \\
+    SVR               & 2.10 & 6.87 & 0.86 \\
     \bottomrule
   \end{tabular}
 \end{table}
