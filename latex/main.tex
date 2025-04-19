@@ -32,6 +32,8 @@
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
+\usepackage{graphicx}       % images
+\graphicspath{ {./img/} }
 
 
 \title{Proyecto Final Aprendizaje Automático}
@@ -62,50 +64,190 @@
 
 
 \begin{abstract}
-  The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
-  both the left- and right-hand margins. Use 10~point type, with a vertical
-  spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
-  bold, and in point size 12. Two line spaces precede the abstract. The abstract
-  must be limited to one paragraph.
+  En este proyecto se desarrolla un análisis predictivo sobre el rendimiento 
+  académico de estudiantes de secundaria en dos institutos de Madrid durante 
+  el año 2005. A partir de un conjunto de datos, se construyen y comparan dos 
+  modelos para predecir la nota final del curso (T3). También se lleva a cabo 
+  un estudio de los datos y de las variables más influyentes en el desarrollo
+  del estudiante. Este estudio busca no solo obtener predicciones precisas, 
+  sino también generar conocimiento accionable para mejorar el rendimiento 
+  estudiantil desde una perspectiva integral.
 \end{abstract}
 
 
-\section{Submission of papers to NeurIPS 2023}
+\section{Exploratory data analysis}
 
 
-Please read the instructions below carefully and follow them faithfully. \textbf{Important:} This year the checklist will be submitted separately from the main paper in OpenReview, please review it well ahead of the submission deadline: \url{https://neurips.cc/public/guides/PaperChecklist}.
+En esta sección se analiza la estructura y distribución del conjunto de datos, identificando patrones, valores atípicos y relaciones relevantes entre variables. También se detalla el proceso de limpieza y preparación necesario para el modelado posterior.
 
 
-\subsection{Style}
+\subsection{Limpieza de datos}
 
 
-Papers to be submitted to NeurIPS 2023 must be prepared according to the
-instructions presented here. Papers may only be up to {\bf nine} pages long,
-including figures. Additional pages \emph{containing only acknowledgments and
-references} are allowed. Papers that exceed the page limit will not be
-reviewed, or in any other way considered for presentation at the conference.
+El proceso de limpieza de datos viene recogido en la función \texttt{data\_cleaning\_pipeline}
+e incluye el manejo de outliers, la imputación de valores faltantes, la corrección de errores, la codificación de las variables 
+categóricas y la estandarización de los datos.
+
+Sólo 5 variables tenían valores faltantes, y con el objetivo de perder la menor cantidad de datos, todos los valores se han imputado siguiendo distintas estrategias.
+\textit{AlcSem, Relfam} y \textit{TiempoEstudio} han sido imputadas por la moda al ser variables categóricas, y tener menos de un 3\% de valores faltantes. \textit{Medu} y \textit{Pedu}, 
+al tener un porcentaje más relevante de valores faltantes, tener una correlación alta (0.653), y al ser variables con mucho peso, como se verá posteriormente, han sido imputadas con un regresor (IterativeImputer) que emplea el resto de datos
+para predecir sus valores de manera más robusta. 
+
+Respecto a los outliers, la variable más llamativa fue \textit{faltas}. Se estableció un valor máximo de 150, correspondiente al número de días lectivos del calendario escolar estándar, considerando 
+cualquier valor superior como erróneo. No se eliminaron registros, ya que \textit{faltas} mostró ser una variable altamente relevante.
+
+% FOTO OUTLIERS ???? XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+Se han corregido los datos de la columna \textit{razon} al tener claves distintas para el mismo valor ("otras", "otros").
+
+Finalmente, tras estudiar el balance de las clases, se ha visto que \textit{EstPadres, EstSup} y \textit{apoyo} están claramente desbalanceadas (80\%-20\%). Sin embargo, dado que ninguna es una variable
+muy relevante, y dado que los resultados reflejan bien el balance que se suele dar en la población real, se ha decidido mantener los datos y tener cuidado con los modelos que le den relevancia a estas variables.
+
+\subsection{Análisis no supervisado}
 
 
-The margins in 2023 are the same as those in previous years.
+Con el objetivo de comprender mejor la relevancia y relación de las variables, se han implementado técnicas de aprendizaje no supervisado, que se pueden consultar en los ficheros \textit{Exploratory\_Data\_Analysis} y \textit{Model1\_Testing}.
+
+En primer lugar, se ha implementado \textbf{Principal Component Analysis (PCA)} con el objetivo de ver si la reducicción de la dimensionalidad aporta beneficios y para ver los componentes principales. 
+La varianza explicada con 2 y 3 componentes principales es menor al 30\%, sin embargo, el estudio de sus loadings aporta información relevante. Para el 1º modelo, como cabía esperar, las variables
+más relevantes son \textit{T1, T2} y \textit{suspensos}, pero es más interesante estudiar el 2º modelo, puesto que al eliminar estas variables, las sutituyen \textit{AlcSem, AlcFin, SalAm, TiempoLib} y otras, que
+ indican que después de las \textbf{notas}, la \textbf{vida social del estudiante} es uno de los factores más relevantes para su desempeño. Además de estos, un tercer grupo de variables de peso que aparecen en los PC son \textit{Medu, Pedu, Relfam} y empleando \textbf{Recursive Feature Elimination (RFE)} 
+se obtiene también \textit{Mtrab\_docencia} y \textit{Ptrab\_docencia}, lo que indica que el \textbf{entorno familiar} es otro de los factores más influyentes en las notas. 
+
+\begin{figure}[h!]
+  \centering
+  \begin{minipage}[b]{0.45\textwidth}
+      \centering
+      \includegraphics[scale=0.30]{PCA2PC.png}
+      \caption*{(a) PCA con 2 componentes principales}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.45\textwidth}
+      \centering
+      \includegraphics[scale=0.28]{PCA3PC.png}
+      \caption*{(b) PCA con 3 componentes principales}
+  \end{minipage}
+  \caption{Visualización de los datos proyectados sobre 2 y 3 componentes principales mediante PCA.}
+\end{figure}
 
 
-Authors are required to use the NeurIPS \LaTeX{} style files obtainable at the
-NeurIPS website as indicated below. Please make sure you use the current files
-and not previous versions. Tweaking the style files may be grounds for
-rejection.
+Sin embargo, PCA requiere 16 componentes para explicar el 80\% de la varianza. Al combinarlo con modelos como SVR o regresión lineal, su rendimiento disminuyó, por lo que se descartó su uso 
+más allá de la exploración inicial. Este comportamiento podría deberse a la naturaleza lineal de PCA, incapaz de capturar relaciones no lineales en los datos. Por ello, se probaron 
+técnicas no lineales como \textbf{ISOMAP} y \textbf{Kernel-PCA}, que operan en espacios transformados mediante distancias geodésicas o kernels y que pueden capturar relaciones más complejas entre los datos. No obstante, su combinación con modelos predictivos redujo el rendimiento entre un 20-30\%. 
+Podemos conluir que la reducción de dimensionalidad implica pérdida de información relevante para la predicción. Las variables no son fácilmente separables.
+
+Asimismo, se aplicaron técnicas de \textbf{Clustering} a los datos (combinadas con PCA). Utilizando la métrica del \textit{Elbow Method} y de la \textit{Silueta}, el número óptimo de clusters  se sitúa entre 2 y 3, en línea con los grupos de variables relevantes identificados anteriormente. No obstante, los valores obtenidos tras aplicar K-Means (Silueta: 0.233; Índice de Davies-Bouldin: 1.341) indican una calidad media en la segmentación, reafirmando la dificultad al separar los datos. 
+Experimentalmente, se probó a añadir una nueva variable indicando la pertenecia a los clusters de los datos para entrenar a un regresor lineal, pero esto no modificó su \textit{performance}, por lo que finalmente, usando la filosofía de la \textit{Navaja de Occam},
+se descartó el uso activo del clustering en los modelos.
+
+\begin{figure}[h!]
+  \centering
+  \begin{minipage}[b]{0.45\textwidth}
+      \centering
+      \includegraphics[scale=0.40]{Elbow_Method.png}
+      \caption*{(a) Elbow Method}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.45\textwidth}
+      \centering
+      \includegraphics[scale=0.4]{Clusters.png}
+      \caption*{(b) Clusters}
+  \end{minipage}
+  \caption{Análisis por clustering}
+\end{figure}
+
+\subsection{Análisis adicional}
 
 
-\subsection{Retrieval of style files}
+A modo de comprobación del análisis anterior, y con el objetivo de descubrir nuevos patrones, se han empleado las características de varios modelos para ver la relevancia de las variables.
+
+Se ha estudiado la representación conjunta de cada par de variables, empleando como código de color las distintas clases para identificar posibles relaciones\footnote{Ver la matriz completa en el fichero \textit{Exploratory\_Data\_Analysis}}, pero sólo se ha encontrado un patrón claro con \textit{T1} y \textit{T2}.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{Plot_Var_T1T2.png}
+  \caption{Scatter Plot con T1 y T2}\label{fig:scatter}
+\end{figure}
+
+Uno de los algoritmos con mejor desempeño en ambos modelos, como se verá más adelante, es \textbf{Random Forest}. Vemos que las variables que considera más importantes coinciden con las obtenidas con PCA en ambos casos.
 
 
-The style files for NeurIPS and other conference information are available on
-the website at
-\begin{center}
-  \url{http://www.neurips.cc/}
-\end{center}
-The file \verb+neurips_2023.pdf+ contains these instructions and illustrates the
-various formatting requirements your NeurIPS paper must satisfy.
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.4\textwidth]{RF_var.png}
+  \caption{Feature importance en Random Forest}\label{fig:t1t2}
+\end{figure}
 
+A pesar de que el modelo de \textbf{regresión} logística no tiene el mejor rendimiento, al ser un clasificador, es interesante emplearlo, junto con regularización Lasso, para ver la evolución de los pesos de las variables para cada una de las clases, lo que aporta una mayor profundidad en el análisis.
+El estudio se ha realizado sin tener en cuante \textit{T1} y \textit{T2} y podemos ver que para las notas más bajas las variables relacionadas con la vida social y la familia son las más importantes, mientras que para las notas más altas, influyen variables más generales.
+
+\begin{figure}[h!]
+  \centering
+  \begin{minipage}[b]{0.3\textwidth}
+      \centering
+      \includegraphics[scale=0.3]{FI_Class1.png}
+      \caption*{(a) Clase 1}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.3\textwidth}
+      \centering
+      \includegraphics[scale=0.3]{FI_Class10.png}
+      \caption*{(b) Clase 10}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.3\textwidth}
+      \centering
+      \includegraphics[scale=0.3]{FI_Class20.png}
+      \caption*{(c) Clase 20}
+  \end{minipage}
+  \caption{Feature Importance para tres clases}
+\end{figure}
+
+
+\section{Implementación y comparación de los dos modelos predictivos}
+
+En esta sección se presentan los algoritmos con mayor rendimiento para ambos enfoques, junto con los criterios que justifican la elección de los modelos finales.
+
+\subsection{Modelo 1: Enfoque Predictivo con la Información Completa del Dataset}
+
+Tras analizar múltiples modelos, se concluyó que los regresores superan consistentemente a los clasificadores, con una mejora media del 20\% en las métricas. Por ello, se descartó en una fase inicial continuar con clasificadores y se priorizó profundizar en modelos de regresión.
+
+Los modelos de clasificación probados junto con su \textit{Accuracy} media fueron \textbf{Logistic Regression} (0.28), \textbf{Logistic Regression con Kernel-PCA} (0.57), \textbf{Support Vector Classifier (SVC)} (0.31), \textbf{Random Forest Classifier} (0.46) y  \textbf{Bagging Classifier} (0.45).\footnote{La implementación de estos modelos y otras métricas se pueden consultar en \textit{Model1\_Testing}}
+
+La Tabla~\ref{sample-table} muestra los mejores modelos de regresión. Para garantizar la consistencia de las métricas, los valores presentados corresponden a los promedios obtenidos tras entrenar 300 modelos por cada técnica, utilizando datos mezclados en cada iteración.
+
+Otros modelos de regresión probados, junto con sus valores \textit{$R^2$} medios fueron \textbf{Bagging Regressor} (0.80), \textbf{Support Vector Regressor (SVR) con Kernel-PCA} (0.80), \textbf{Linear Regression con ISOMAP} (0.61) y \textbf{Linear Regression con Kernel-PCA} (0.80).
+
+\begin{table}
+  \caption{Modelos de regresión}
+  \label{sample-table}
+  \centering
+  \begin{tabular}{lcccc}
+    \toprule
+    \multicolumn{5}{c}{Comparativa entre modelos} \\
+    \cmidrule(r){1-5}
+    Nombre & R² Score Test & MAE & MSE & R² Score Train \\
+    \midrule
+    Linear Regression & 0.8301 $\pm$ 0.033 & 0.2513 & 0.1693 & 0.853 \\
+    LR con relaciones & 0.8338 $\pm$ 0.0319 & 0.2496 & 0.1682 & 0.855 \\
+    Ensemble de LR    & 0.8332 $\pm$ 0.0339 & 0.2491 & 0.1669 & 0.852 \\
+    Stack             & 0.8332 $\pm$ 0.0339 & 0.2513 & 0.1693 & 0.853 \\
+    Bagging           & 0.830  $\pm$ 0.033  & 0.2513 & 0.1693 & 0.853 \\
+    Random Forest     & 0.830  $\pm$ 0.033  & 0.2513 & 0.1693 & 0.853 \\
+    SVR               & 0.830  $\pm$ 0.033  & 0.2513 & 0.1693 & 0.853 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Modelo 2: Enfoque Predictivo sin las variables T1 y T2}
+
+Al eliminar las variables de más peso, los modelos reducen a la mitad su poder predictivo.
+
+\section{Conclusiones accionables}
+
+El análisis de los datos nos indica que influyen tres grupos principales de variables a la hora de predecir el desempeño de los estudientes, las \textbf{notas previas}, la \textbf{vida social} del estudiante, y su \textbf{entorno familiar}.
+Con esta información, los centros educativos pueden enfocar sus medidas en estas áreas. Sensibilizar al alumnado sobre la importancia de equilibrar vida social y estudio puede favorecer su rendimiento. Asimismo, promover políticas de 
+conciliación familiar podría tener un impacto positivo en sus resultados académicos.
 
 The only supported style file for NeurIPS 2023 is \verb+neurips_2023.sty+,
 rewritten for \LaTeXe{}.  \textbf{Previous style files for \LaTeX{} 2.09,
@@ -138,9 +280,6 @@ paper. All you have to do is replace the author, title, abstract, and text of
 the paper with your own.
 
 
-The formatting instructions contained in these style files are summarized in
-Sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
-
 
 \section{General formatting instructions}
 \label{gen_inst}
@@ -168,7 +307,7 @@ follow. If there is only one co-author, list both author and co-author side by
 side.
 
 
-Please pay special attention to the instructions in Section \ref{others}
+Please pay special attention to the instructions in Section 
 regarding figures, tables, acknowledgments, and references.
 
 
@@ -294,7 +433,7 @@ color.
 
 
 All tables must be centered, neat, clean and legible.  The table number and
-title always appear before the table.  See Table~\ref{sample-table}.
+%title always appear before the table.  See Table~\ref{sample-table}.
 
 
 Place one line space before the table title, one line space after the
@@ -309,31 +448,12 @@ typesetting high-quality, professional tables:
 \begin{center}
   \url{https://www.ctan.org/pkg/booktabs}
 \end{center}
-This package was used to typeset Table~\ref{sample-table}.
+%This package was used to typeset Table~\ref{sample-table}.
 
 
-\begin{table}
-  \caption{Modelos de regresión}
-  \label{sample-table}
-  \centering
-  \begin{tabular}{lccc}
-    \toprule
-    \multicolumn{4}{c}{Comparativa entre modelos} \\
-    \cmidrule(r){1-4}
-    Nombre     & MAE     & MSE    & R² Score \\
-    \midrule
-    Linear Regression & 0.24 & 0.147 & 0.843 \\
-    Ensemble of RL    & 0.24 & 0.147 & 0.842 \\
-    Stack    & 0.84 & 2.0 & 0.863 \\
-    Bagging    & 0.81 & 1.79 & 0.878 \\
-    Random Forest     & 0.82 & 1.71 & 0.883 \\
-    SVR               & 2.10 & 6.87 & 0.86 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
 \subsection{Math}
-Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
+%Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
 
 \subsection{Final instructions}
 

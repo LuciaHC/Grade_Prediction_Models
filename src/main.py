@@ -1,5 +1,5 @@
 import configparser
-import functions as f
+from data_processing import data_cleaning_pipeline
 from Model_1 import Model1
 from Model_2 import Model2
 
@@ -7,11 +7,11 @@ from Model_2 import Model2
 
 if __name__ == '__main__':
 
-    config = configparser.ConfigParser()
-    config.read('configuration.ini')
-    predictions_file = config['created_files']['predictions']
+    # config = configparser.ConfigParser()
+    # config.read('configuration.ini')
+    # predictions_file = config['created_files']['predictions']
 
-    scaler = f.data_cleaning_pipeline()
+    scaler = data_cleaning_pipeline()
 
     # from functions import cross_validation
     # from sklearn.linear_model import LinearRegression
