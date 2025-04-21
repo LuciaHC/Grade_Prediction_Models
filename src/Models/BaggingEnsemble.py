@@ -24,7 +24,7 @@ class Bagging_Ensemble:
         """Fit the Bagging Ensemble using regression or classification
 
         Args:
-           X_train (pd.DataFrame): Training features
+            X_train (pd.DataFrame): Training features
             X_test (pd.DataFrame): Test features
             y_test (pd.Series): True test target
             n_estimators (int): Number of trees. Defaults to 10

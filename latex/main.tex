@@ -33,6 +33,7 @@
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
 \usepackage{graphicx}       % images
+\usepackage{float}          % positioning
 \graphicspath{ {./img/} }
 
 
@@ -80,6 +81,9 @@
 
 En esta sección se analiza la estructura y distribución del conjunto de datos, identificando patrones, valores atípicos y relaciones relevantes entre variables. También se detalla el proceso de limpieza y preparación necesario para el modelado posterior.
 
+El desarrollo detallado de estos análisis se encuentra principalmente documentado en \textit{Exploratory\_Data\_Analysis}. No obstante, ciertas observaciones derivadas del análisis 
+conjunto con modelos predictivos pueden consultarse en \textit{Model1\_Testing} y \textit{Model2\_Testing}.
+
 
 \subsection{Limpieza de datos}
 
@@ -88,27 +92,34 @@ El proceso de limpieza de datos viene recogido en la función \texttt{data\_clea
 e incluye el manejo de outliers, la imputación de valores faltantes, la corrección de errores, la codificación de las variables 
 categóricas y la estandarización de los datos.
 
-Sólo 5 variables tenían valores faltantes, y con el objetivo de perder la menor cantidad de datos, todos los valores se han imputado siguiendo distintas estrategias.
-\textit{AlcSem, Relfam} y \textit{TiempoEstudio} han sido imputadas por la moda al ser variables categóricas, y tener menos de un 3\% de valores faltantes. \textit{Medu} y \textit{Pedu}, 
-al tener un porcentaje más relevante de valores faltantes, tener una correlación alta (0.653), y al ser variables con mucho peso, como se verá posteriormente, han sido imputadas con un regresor (IterativeImputer) que emplea el resto de datos
+Sólo 5 variables tenían valores faltantes, y con el objetivo de perder la menor cantidad de datos, todos los valores se imputaron siguiendo distintas estrategias.
+\textit{AlcSem, Relfam} y \textit{TiempoEstudio} se imputaron por la moda al ser variables categóricas, y tener menos de un 3\% de valores faltantes. \textit{Medu} y \textit{Pedu}, 
+al tener un porcentaje más relevante de valores faltantes, tener una correlación de Pearson alta (0.653), y al ser variables con mucho peso, como se verá posteriormente, se imputaron con un regresor (IterativeImputer) que emplea el resto de datos
 para predecir sus valores de manera más robusta. 
 
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.7\textwidth]{Boxplot_Outliers.png}
+  \caption{Boxplot de las variables}\label{fig:boxplot}
+\end{figure}
+
+
+
 Respecto a los outliers, la variable más llamativa fue \textit{faltas}. Se estableció un valor máximo de 150, correspondiente al número de días lectivos del calendario escolar estándar, considerando 
-cualquier valor superior como erróneo. No se eliminaron registros, ya que \textit{faltas} mostró ser una variable altamente relevante.
+cualquier valor superior como erróneo. Se probaron dos estrategias adicionales, eliminar registros, e imputar los outliers por la mediana, pero ambas estrategias disminuyeron la 
+\textit{performance} de los modelos en varios puntos. Esto muestra no sólo que \textit{faltas} es una variable altamente relevante, sino que en este caso los outliers son muy informativos.
 
-% FOTO OUTLIERS ???? XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Se corrigieron los datos de la columna \textit{razon} al tener claves distintas para el mismo valor ("otras", "otros").
 
-Se han corregido los datos de la columna \textit{razon} al tener claves distintas para el mismo valor ("otras", "otros").
-
-Finalmente, tras estudiar el balance de las clases, se ha visto que \textit{EstPadres, EstSup} y \textit{apoyo} están claramente desbalanceadas (80\%-20\%). Sin embargo, dado que ninguna es una variable
-muy relevante, y dado que los resultados reflejan bien el balance que se suele dar en la población real, se ha decidido mantener los datos y tener cuidado con los modelos que le den relevancia a estas variables.
+Finalmente, tras estudiar el balance de las clases, se vió que \textit{EstPadres, EstSup} y \textit{apoyo} estaban claramente desbalanceadas (80\%-20\%). Sin embargo, dado que ninguna es una variable
+muy relevante, y dado que los resultados reflejan bien el balance que se suele dar en la población real, se decidió mantener los datos y tener cuidado con los modelos que le den relevancia a estas variables.
 
 \subsection{Análisis no supervisado}
 
 
-Con el objetivo de comprender mejor la relevancia y relación de las variables, se han implementado técnicas de aprendizaje no supervisado, que se pueden consultar en los ficheros \textit{Exploratory\_Data\_Analysis} y \textit{Model1\_Testing}.
+Con el objetivo de comprender mejor la relevancia y relación de las variables, se implementaron técnicas de aprendizaje no supervisado. 
 
-En primer lugar, se ha implementado \textbf{Principal Component Analysis (PCA)} con el objetivo de ver si la reducicción de la dimensionalidad aporta beneficios y para ver los componentes principales. 
+En primer lugar, se ha implementado \textbf{Principal Component Analysis (PCA)} con el objetivo de estudiar la reducción de dimensionalidad y los componentes principales. 
 La varianza explicada con 2 y 3 componentes principales es menor al 30\%, sin embargo, el estudio de sus loadings aporta información relevante. Para el 1º modelo, como cabía esperar, las variables
 más relevantes son \textit{T1, T2} y \textit{suspensos}, pero es más interesante estudiar el 2º modelo, puesto que al eliminar estas variables, las sutituyen \textit{AlcSem, AlcFin, SalAm, TiempoLib} y otras, que
  indican que después de las \textbf{notas}, la \textbf{vida social del estudiante} es uno de los factores más relevantes para su desempeño. Además de estos, un tercer grupo de variables de peso que aparecen en los PC son \textit{Medu, Pedu, Relfam} y empleando \textbf{Recursive Feature Elimination (RFE)} 
@@ -134,9 +145,25 @@ se obtiene también \textit{Mtrab\_docencia} y \textit{Ptrab\_docencia}, lo que 
 Sin embargo, PCA requiere 16 componentes para explicar el 80\% de la varianza. Al combinarlo con modelos como SVR o regresión lineal, su rendimiento disminuyó, por lo que se descartó su uso 
 más allá de la exploración inicial. Este comportamiento podría deberse a la naturaleza lineal de PCA, incapaz de capturar relaciones no lineales en los datos. Por ello, se probaron 
 técnicas no lineales como \textbf{ISOMAP} y \textbf{Kernel-PCA}, que operan en espacios transformados mediante distancias geodésicas o kernels y que pueden capturar relaciones más complejas entre los datos. No obstante, su combinación con modelos predictivos redujo el rendimiento entre un 20-30\%. 
-Podemos conluir que la reducción de dimensionalidad implica pérdida de información relevante para la predicción. Las variables no son fácilmente separables.
+Podemos conluir que la reducción de dimensionalidad implica la pérdida de información relevante para la predicción. Las variables no son fácilmente separables y por ello, finalmente, se empleó el dataset completo para el entrenamiento de los modelos.
 
-Asimismo, se aplicaron técnicas de \textbf{Clustering} a los datos (combinadas con PCA). Utilizando la métrica del \textit{Elbow Method} y de la \textit{Silueta}, el número óptimo de clusters  se sitúa entre 2 y 3, en línea con los grupos de variables relevantes identificados anteriormente. No obstante, los valores obtenidos tras aplicar K-Means (Silueta: 0.233; Índice de Davies-Bouldin: 1.341) indican una calidad media en la segmentación, reafirmando la dificultad al separar los datos. 
+\begin{figure}[h!]
+  \centering
+  \begin{minipage}[b]{0.45\textwidth}
+      \centering
+      \includegraphics[scale=0.28]{KernelPCA3.png}
+      \caption*{(a) Kernel-PCA con 3 PC}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.45\textwidth}
+      \centering
+      \includegraphics[scale=0.28]{ISOMAP3.png}
+      \caption*{(b) ISOMAP con 3 PC}
+  \end{minipage}
+  \caption{Aplicación de Kernel-PCA e ISOMAP con 3 PC}
+\end{figure}
+
+Asimismo, se aplicaron técnicas de \textbf{Clustering} a los datos (combinadas con PCA). Utilizando la métrica del \textit{Elbow Method} y de la \textit{Silueta}, se obtuvo el número óptimo de clusters (2-3), que coincide con los grupos de variables relevantes identificados anteriormente. No obstante, los valores obtenidos tras aplicar K-Means (Silueta: 0.233; Índice de Davies-Bouldin: 1.341) indican una calidad media en la segmentación, reafirmando la dificultad al separar los datos. 
 Experimentalmente, se probó a añadir una nueva variable indicando la pertenecia a los clusters de los datos para entrenar a un regresor lineal, pero esto no modificó su \textit{performance}, por lo que finalmente, usando la filosofía de la \textit{Navaja de Occam},
 se descartó el uso activo del clustering en los modelos.
 
@@ -156,12 +183,16 @@ se descartó el uso activo del clustering en los modelos.
   \caption{Análisis por clustering}
 \end{figure}
 
+Aunque las técnicas de aprendizaje no supervisado no fueron incorporadas directamente en los modelos finales, su aplicación contribuyó significativamente a una comprensión más profunda de la estructura y relaciones entre las variables del conjunto de datos, lo cual resultó de gran valor para el desarrollo y justificación del enfoque predictivo adoptado.
+La conclusión más relevante, utilizar el dataset entero sin reducir la dimensionalidad, llevó al descarte de modelos como KNNeighbours, que podían verse afectados por el \textit{curse of dimensionality}.
+
 \subsection{Análisis adicional}
 
 
-A modo de comprobación del análisis anterior, y con el objetivo de descubrir nuevos patrones, se han empleado las características de varios modelos para ver la relevancia de las variables.
+En paralelo al análisis anterior, y con el objetivo de ampliar el conocimiento sobre las variables, se utilizaron las capacidades explicativas de distintos modelos para evaluar la importancia relativa de cada característica.
 
-Se ha estudiado la representación conjunta de cada par de variables, empleando como código de color las distintas clases para identificar posibles relaciones\footnote{Ver la matriz completa en el fichero \textit{Exploratory\_Data\_Analysis}}, pero sólo se ha encontrado un patrón claro con \textit{T1} y \textit{T2}.
+Se estudió la representación conjunta de cada par de variables, empleando como código de color las distintas clases (0-20) para identificar posibles relaciones entre los datos\footnote{Ver la matriz completa en el fichero \textit{Exploratory\_Data\_Analysis}}, pero sólo se encontró un patrón claro con \textit{T1} y \textit{T2}, 
+demostrando de nuevo que son variables muy significativas para la predicción.
 
 \begin{figure}[ht]
   \centering
@@ -169,35 +200,37 @@ Se ha estudiado la representación conjunta de cada par de variables, empleando 
   \caption{Scatter Plot con T1 y T2}\label{fig:scatter}
 \end{figure}
 
-Uno de los algoritmos con mejor desempeño en ambos modelos, como se verá más adelante, es \textbf{Random Forest}. Vemos que las variables que considera más importantes coinciden con las obtenidas con PCA en ambos casos.
+Uno de los algoritmos con mejor desempeño en ambos modelos, como se verá más adelante, fue \textbf{Random Forest}. Vemos que las variables a las que asigna un mayor peso coinciden con las obtenidas con PCA y con otros métodos. Como T1 y T2 están muy correlacionadas (0.863)\footnote{Coeficiente de Correlación de Pearson},
+vemos que el modelo asigna la mayor parte del peso a T2, lo que no indica que tenga una mayor importancia.
 
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.4\textwidth]{RF_var.png}
+  \includegraphics[width=0.3\textwidth]{RF_var.png}
   \caption{Feature importance en Random Forest}\label{fig:t1t2}
 \end{figure}
 
 A pesar de que el modelo de \textbf{regresión} logística no tiene el mejor rendimiento, al ser un clasificador, es interesante emplearlo, junto con regularización Lasso, para ver la evolución de los pesos de las variables para cada una de las clases, lo que aporta una mayor profundidad en el análisis.
-El estudio se ha realizado sin tener en cuante \textit{T1} y \textit{T2} y podemos ver que para las notas más bajas las variables relacionadas con la vida social y la familia son las más importantes, mientras que para las notas más altas, influyen variables más generales.
+El estudio se ha realizado sin tener en cuenta \textit{T1} y \textit{T2} y podemos ver que para las notas más bajas las variables relacionadas con la vida social y la familia son las más importantes, mientras que para las notas más altas, influyen variables más variadas.
+Es interesante ver que para las notas más altas (Clase 20), muchas de las variables relacionadas con la vida social (\textit{AlcSem, AlcFin} y \textit{faltas}) se comportan de manera casi idéntica, lo que refleja un grado de relación grande, que ya hemos visto en el análisis anterior.
 
-\begin{figure}[h!]
+\begin{figure}[H]
   \centering
   \begin{minipage}[b]{0.3\textwidth}
       \centering
-      \includegraphics[scale=0.3]{FI_Class1.png}
+      \includegraphics[scale=0.25]{FI_Class1.png}
       \caption*{(a) Clase 1}
   \end{minipage}
   \hfill
   \begin{minipage}[b]{0.3\textwidth}
       \centering
-      \includegraphics[scale=0.3]{FI_Class10.png}
+      \includegraphics[scale=0.25]{FI_Class10.png}
       \caption*{(b) Clase 10}
   \end{minipage}
   \hfill
   \begin{minipage}[b]{0.3\textwidth}
       \centering
-      \includegraphics[scale=0.3]{FI_Class20.png}
+      \includegraphics[scale=0.25]{FI_Class20.png}
       \caption*{(c) Clase 20}
   \end{minipage}
   \caption{Feature Importance para tres clases}
@@ -208,46 +241,120 @@ El estudio se ha realizado sin tener en cuante \textit{T1} y \textit{T2} y podem
 
 En esta sección se presentan los algoritmos con mayor rendimiento para ambos enfoques, junto con los criterios que justifican la elección de los modelos finales.
 
+El desarrollo completo del análisis se encuentra en \textit{notebooks}. Las pruebas realizadas sobre los datos con los modelos iniciales se encuentran en \textit{Model1\_Testing} y \textit{Model2\_Testing}.
+La selección de los parámetros de los modelos finales por validación cruzada se puede consultar en \textit{Final\_Model1\_Tuning} y \textit{Final\_Model2\_Tuning}. Por último, las métricas mostradas en el informe
+se obtuvieron en \textit{Metrics\_Evaluator}.
+
 \subsection{Modelo 1: Enfoque Predictivo con la Información Completa del Dataset}
 
 Tras analizar múltiples modelos, se concluyó que los regresores superan consistentemente a los clasificadores, con una mejora media del 20\% en las métricas. Por ello, se descartó en una fase inicial continuar con clasificadores y se priorizó profundizar en modelos de regresión.
 
-Los modelos de clasificación probados junto con su \textit{Accuracy} media fueron \textbf{Logistic Regression} (0.28), \textbf{Logistic Regression con Kernel-PCA} (0.57), \textbf{Support Vector Classifier (SVC)} (0.31), \textbf{Random Forest Classifier} (0.46) y  \textbf{Bagging Classifier} (0.45).\footnote{La implementación de estos modelos y otras métricas se pueden consultar en \textit{Model1\_Testing}}
+Los modelos de clasificación probados junto con su \textit{Accuracy} media fueron \textbf{Logistic Regression} (0.28), \textbf{Logistic Regression con Kernel-PCA} (0.57), \textbf{Support Vector Classifier (SVC)} (0.31), \textbf{Random Forest Classifier} (0.46) y  \textbf{Bagging Classifier} (0.45). 
+Se programaron manualmente Logistic Regression, Random Forest Classifier y  Bagging Classifier.
 
-La Tabla~\ref{sample-table} muestra los mejores modelos de regresión. Para garantizar la consistencia de las métricas, los valores presentados corresponden a los promedios obtenidos tras entrenar 300 modelos por cada técnica, utilizando datos mezclados en cada iteración.
+La Tabla~\ref{table-M1} muestra los mejores modelos de regresión. Para garantizar la consistencia de las métricas, los valores presentados se corresponden con los promedios obtenidos tras entrenar 900 modelos por cada técnica, utilizando datos reordenados aleatoriamente en cada iteración.
 
-Otros modelos de regresión probados, junto con sus valores \textit{$R^2$} medios fueron \textbf{Bagging Regressor} (0.80), \textbf{Support Vector Regressor (SVR) con Kernel-PCA} (0.80), \textbf{Linear Regression con ISOMAP} (0.61) y \textbf{Linear Regression con Kernel-PCA} (0.80).
+Otros modelos de regresión entrenados, junto con sus valores \textit{$R^2$} medios fueron \textbf{Support Vector Regressor (SVR) con Kernel-PCA} (0.80), \textbf{Linear Regression con ISOMAP} (0.61) y \textbf{Linear Regression con Kernel-PCA} (0.80). Todos ellos fueron descartados para el proceso de validación cruzada ya que tienen una \textit{performance} inferior.
+Los modelos de árboles individuales fueron descartados a favor de los \textit{Ensembles}.
 
-\begin{table}
-  \caption{Modelos de regresión}
-  \label{sample-table}
+\begin{table}[H]
+  \caption{Modelos de regresión (Modelo 1)}
+  \label{table-M1}
   \centering
-  \begin{tabular}{lcccc}
+  \begin{tabular}{lccccc}
     \toprule
-    \multicolumn{5}{c}{Comparativa entre modelos} \\
-    \cmidrule(r){1-5}
-    Nombre & R² Score Test & MAE & MSE & R² Score Train \\
+    \multicolumn{6}{c}{Comparativa entre modelos} \\
+    \cmidrule(r){1-6}
+    Nombre & R² Score Test & MAE & MSE & R² Score Train & $\Delta$Score \\
     \midrule
-    Linear Regression & 0.8301 $\pm$ 0.033 & 0.2513 & 0.1693 & 0.853 \\
-    LR con relaciones & 0.8338 $\pm$ 0.0319 & 0.2496 & 0.1682 & 0.855 \\
-    Ensemble de LR    & 0.8332 $\pm$ 0.0339 & 0.2491 & 0.1669 & 0.852 \\
-    Stack             & 0.8332 $\pm$ 0.0339 & 0.2513 & 0.1693 & 0.853 \\
-    Bagging           & 0.830  $\pm$ 0.033  & 0.2513 & 0.1693 & 0.853 \\
-    Random Forest     & 0.830  $\pm$ 0.033  & 0.2513 & 0.1693 & 0.853 \\
-    SVR               & 0.830  $\pm$ 0.033  & 0.2513 & 0.1693 & 0.853 \\
+    Linear Regression & 0.8301 $\pm$ 0.0335 & 0.9968 & 2.6484 & 0.853 & 0.0229\\
+    LR con relaciones & 0.8338 $\pm$ 0.0327 & 1.0010 & 2.6682 & 0.854 & 0.0207 \\
+    Ensemble de LR    & 0.8320 $\pm$ 0.0334 & 1.0011 & 2.6847 & 0.852 & 0.0200\\
+    Stack             & 0.8497 $\pm$ 0.0334 & 0.9667 & 2.4228 & 0.938 & 0.0883\\
+    Bagging           & 0.8531 $\pm$ 0.0366 & 0.9271 & 2.3367 & 0.979 & 0.1259\\
+    Random Forest     & 0.8552 $\pm$ 0.0343 & 0.9119 & 2.2354 & 0.980 & 0.1248\\
+    Boosting     & \textbf{0.8661 $\pm$ 0.0304} & \textbf{0.8945} & \textbf{2.1335} & 0.926 & 0.0597\\
+    SVR               & 0.8331 $\pm$ 0.0371 & 0.9265 & 2.7643 & 0.838 & \textbf{0.0049}\\
     \bottomrule
   \end{tabular}
 \end{table}
 
+Podemos observar que \textbf{Gradient Boosting Regressor} tiene los mejores resultados en todas las métricas, y que además, al contrario que Bagging y Random Forest, tiene una $\Delta$Score muy baja, lo que indica poco \textit{overfitting}.
+En este modelo ha sido muy importante la selección de parámetros, puesto que su \textit{score} era de los más variables (0.7-0.9).
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.3\textwidth]{CV_Boosting_N.png}
+  \caption{Proceso CV para Boosting para \textit{n\_estimators}.}
+\end{figure}
+
 \subsection{Modelo 2: Enfoque Predictivo sin las variables T1 y T2}
 
-Al eliminar las variables de más peso, los modelos reducen a la mitad su poder predictivo.
+Al eliminar las variables de más peso, los modelos reducen a la mitad su poder predictivo, pero se mantiene la superioridad de los regresores frente a los clasificadores.
+
+En esta ocasión, dados los resultados anteriores, los únicos clasificadores probados, junto con su \textit{Accuracy} media fueron \textbf{Logistic Regression} (0.237) y \textbf{Classification Stack}\footnote{Usando Logistic Regression, SVC y Random Forest Classification} (0.137).
+En el Modelo 1, la \textit{performance} del regresor logístico mejoró al combinarlo con \textbf{Kernel-PCA}, pero con el 2º Modelo, se ha disminuido su \textit{Accuracy} a 0.0933. Esto se debe probablemente a que los primeros componentes principales capturaban en gran medida la varianza explicada 
+por las variables T1 y T2. Al eliminarlas, la estructura de varianza se ve alterada significativamente, lo que reduce la capacidad del modelo.
+
+Adicionalmente a los regresores mostrados en la tabla, se probaron a su vez \textbf{Linear Regression} (0.21), \textbf{Linear Regression con Clustering} (0.18), \textbf{Linear Regression con Kernel-PCA} (0.11) y mi clase personalizada de \textbf{Linear Regression con relaciones} (0.23). Dado que 
+en el modelo anterior Gradient Boosting tuvo la mejor \textit{performance}, se investigaron métodos optimizados como \textbf{CatBoosting} (0.26), \textbf{XGBoost} (0.20) y \textbf{Light GBM} (0.23). Todos estos métodos de Boosting 
+están optimizados para tratar con características como datasets grandes, muchas variables categóricas o gran dimensionalidad, características que coinciden con nuestro dataset, pero tras probarlos, fueron descartados al tener una \textit{performance} inferior a Gradient Boosting.
+
+\begin{table}[H]
+  \caption{Modelos de regresión (Modelo 2)}
+  \label{table-M2}
+  \centering
+  \begin{tabular}{lccccc}
+    \toprule
+    \multicolumn{6}{c}{Comparativa entre modelos} \\
+    \cmidrule(r){1-6}
+    Nombre & R² Score Test & MAE & MSE & R² Score Train & $\Delta$Score \\
+    \midrule
+    Linear Regression  & 0.1999 $\pm$ 0.0625 & 2.5932 & 12.763 & 0.302 & 0.1021\\
+    Stack              & 0.3153 $\pm$ 0.0699 & 2.4093 & 10.817 & 0.783 & 0.4677 \\
+    Bagging            & 0.2998 $\pm$ 0.0806 & 2.3954 & 10.971 & 0.904 & 0.6042\\
+    Random Forest      & 0.3056 $\pm$ 0.0768 & 2.3953 & 10.935 & 0.905 & 0.5994\\
+    Boosting           & 0.3005 $\pm$ 0.0810 & 2.4709 & 11.025 & 0.681 & 0.3805\\
+    SVR                & 0.2856 $\pm$ 0.0657 & 2.4193 & 11.423 & 0.730 & 0.4444\\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Conclusiones accionables}
 
 El análisis de los datos nos indica que influyen tres grupos principales de variables a la hora de predecir el desempeño de los estudientes, las \textbf{notas previas}, la \textbf{vida social} del estudiante, y su \textbf{entorno familiar}.
 Con esta información, los centros educativos pueden enfocar sus medidas en estas áreas. Sensibilizar al alumnado sobre la importancia de equilibrar vida social y estudio puede favorecer su rendimiento. Asimismo, promover políticas de 
 conciliación familiar podría tener un impacto positivo en sus resultados académicos.
+
+
+\section*{References}
+
+{
+\small
+
+
+[1] Javier Béjar. \ \textit{Strategies and Algorithms for Clustering Large Datasets: A
+Review.} \ Universidad Politécnica de Cataluña.
+\url{https://upcommons.upc.edu/bitstream/handle/2117/23415/R13-11.pdf}
+
+
+[2] Alfonso Cervantes Barragan. \ (2024). \ \textit{Interpreting and Validating Clustering Results with K-Means}. 
+\ Medium. 
+\url{https://medium.com/@a.cervantes2012/interpreting-and-validating-clustering-results-with-k-means-e98227183a4d}
+
+
+[3] Connie Zhou.\ (2023). \ \textit{Unraveling Data Patterns with Isomap: A Guide to Dimensionality Reduction — Part 4}.
+\url{https://medium.com/@conniezhou678/unraveling-data-patterns-with-isomap-a-guide-to-dimensionality-reduction-part-4-1d774eee69a5}
+
+[4] (2025). \ \textit{Gradient Boosting in ML}. \ Geeks for Geeks.
+\url{https://www.geeksforgeeks.org/ml-gradient-boosting/}
+
+}
+
+
+
+
+
 
 The only supported style file for NeurIPS 2023 is \verb+neurips_2023.sty+,
 rewritten for \LaTeXe{}.  \textbf{Previous style files for \LaTeX{} 2.09,
@@ -552,36 +659,7 @@ Do {\bf not} include this section in the anonymized submission, only in the fina
 Authors may wish to optionally include extra information (complete proofs, additional experiments and plots) in the appendix. All such materials should be part of the supplemental material (submitted separately) and should NOT be included in the main submission.
 
 
-\section*{References}
 
-
-References follow the acknowledgments in the camera-ready paper. Use unnumbered first-level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
-when listing the references.
-Note that the Reference section does not count towards the page limit.
-\medskip
-
-
-{
-\small
-
-
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
-connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
-(eds.), {\it Advances in Neural Information Processing Systems 7},
-pp.\ 609--616. Cambridge, MA: MIT Press.
-
-
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
-  Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
-TELOS/Springer--Verlag.
-
-
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
-recall at excitatory recurrent synapses and cholinergic modulation in rat
-hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
-}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

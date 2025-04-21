@@ -1,7 +1,5 @@
 import configparser
 from data_processing import data_cleaning_pipeline
-from Model_1 import Model1
-from Model_2 import Model2
 
 
 
