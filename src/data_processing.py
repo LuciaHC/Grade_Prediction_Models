@@ -11,9 +11,28 @@ config = configparser.ConfigParser()
 config.read('configuration.ini')
 
 
-def final_predictions_csv(file,model1_predictions, model2_predictions):
-    submission = pd.DataFrame({'Modelo_i': model1_predictions,'Modelo_ii': model2_predictions})
-    submission.to_csv(file, index=False)
+def get_data():
+    numerical_vars = ['edad','suspensos','RelFam','TiempoLib','Medu','Pedu','TiempoViaje','TiempoEstudio','SalAm','AlcSem','AlcFin','salud','faltas','T1','T2']
+
+    data = pd.read_csv('data/train.csv',sep = ',')
+    X_train = data.drop(columns=['T3']).reset_index(drop=True)
+    y_train = data['T3'].reset_index(drop=True)
+
+    data_test = pd.read_csv('data/test.csv',sep = ',')
+    X_test = data_test.drop(columns=['T3']).reset_index(drop=True)
+    y_test = data_test['T3'].reset_index(drop=True)
+
+    scaler_X = StandardScaler()
+    X_train_M1 = X_train.copy()
+    X_test_M1 = X_test.copy()
+    X_train_M1[numerical_vars] = scaler_X.fit_transform(X_train[numerical_vars])
+    X_test_M1[numerical_vars] = scaler_X.transform(X_test[numerical_vars])
+
+    X_train_M2 = X_train_M1.drop(columns=['T2','T1']).reset_index(drop=True)
+    X_test_M2 = X_test_M1.drop(columns=['T2','T1']).reset_index(drop=True)
+
+    return X_train_M1, X_test_M1, X_train_M2,X_test_M2, y_train, y_test
+
 
 def standarize_numerical_variables(X_train, X_test, y_train, y_test,model):
     if model == 1:
@@ -50,6 +69,7 @@ def data_cleaning_pipeline():
 
     # Outliers
     df_train['faltas'] = df_train['faltas'].clip(0,150)
+    df_test['faltas'] = df_test['faltas'].clip(0,150)
 
     # Missing Values
     for column in ['TiempoEstudio', 'RelFam','AlcSem']:
@@ -57,8 +77,14 @@ def data_cleaning_pipeline():
     imp = IterativeImputer(max_iter=10, random_state=0)
     df_train[["Medu", "Pedu"]] = imp.fit_transform(df_train[["Medu", "Pedu"]])
 
+    for column in ['TiempoEstudio', 'RelFam','AlcSem']:
+        df_test[column] = df_test[column].fillna(value=df_test[column].mode()[0])
+    imp = IterativeImputer(max_iter=10, random_state=0)
+    df_test[["Medu", "Pedu"]] = imp.fit_transform(df_test[["Medu", "Pedu"]])
+
     # Correct errors in data
-    df_train.loc[df_train['razon'] == 'otras', 'razon'] = 'otros'
+    df_train.loc[df_train['razon'] == 'otros', 'razon'] = 'otras'
+    df_test.loc[df_test['razon'] == 'otros', 'razon'] = 'otras'
 
     # Dummy encoding
     df_train_cat = pd.get_dummies(df_train,columns=categorical_vars,drop_first=True)
@@ -86,6 +112,10 @@ def inverse_scale_T3(scaler,predictions):
     original_col = predictions * scale + mean
     return original_col
 
+def final_predictions_csv(file,model1_predictions, model2_predictions):
+    submission = pd.DataFrame({'Modelo_i': model1_predictions,'Modelo_ii': model2_predictions})
+    submission = submission.clip(lower = 0)
+    submission.to_csv(file, index=False)
 
 def get_path(section, key,base_path):
     """Manages path routes in the notebooks

@@ -80,8 +80,6 @@ class Bagging_Ensemble:
 
 # def manual_bagging(X_train, y_train, X_test, y_test, n_estimators, max_samples, tipo):
 #     """
-
-
 #     Parameters:
 #         X_train (pd.DataFrame): Training features
 #         y_train (pd.Series): Training target

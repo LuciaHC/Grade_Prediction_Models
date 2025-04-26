@@ -12,21 +12,21 @@ This repository contains two predictive models designed to estimate students' gr
 ---  
 
 ## 📂 Contents  
-1. [🔹] [General Description](#general-description)  
+1. [🌍] [General Description](#general-description)  
 2. [⚙️] [Installation and Execution](#installation-and-execution)  
-3. [📊] [Module Distribution] (#module-distribution)
+3. [📊] [Module Distribution](#module-distribution)
 4. [🚀] [Results and Conclusions](#results-and-conclusions)  
-5. [📜] [References](#references)  
+
 
 ---  
 
-## 🔹 General Description  
+## 🌍 <span id="general-description">General Description </span>  
 
 This project develops predictive models to analyze the factors influencing students' academic performance in two high schools in Madrid in 2005. Using demographic, social, and academic data, two models are built: one that includes previous grades and another that excludes these values to assess the influence of other factors. The objective is to understand which variables have the most impact on the final grade and explore strategies to improve student performance.  
 
 ---  
 
-## ⚙️ Installation and Execution  
+## ⚙️ <span id="installation-and-execution">Installation and Execution</span>
 
 ### 🚀 Prerequisites  
 
@@ -53,13 +53,13 @@ cd src/
 # Install dependencies
 pip install -r requirements.txt  
 
-# Run the environment
+# Run the project
 python main.py  
 
 ```
 ---
 
-## 📖 Module Distribution
+## 📖 <span id="module-distribution">Module Distribution</span>
 
 The project is divided in the following modules (inside \src folder):
 
@@ -74,11 +74,8 @@ The project is divided in the following modules (inside \src folder):
 
 ---
 
-## 📊 Results and Conclusions
+## 📊 <span id="results-and-conclusions">Results and Conclusions</span>
 
-All of the results and the conclusions of this proyect (in spanish) can be consulted in the document *Informe.pdf*
+All of the results and the conclusions of this proyect (in Spanish) can be consulted in the document *Informe.pdf*
 
-
----
-## 📜 References
 

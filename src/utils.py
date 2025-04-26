@@ -1,10 +1,13 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import seaborn as sns
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     mean_absolute_error, mean_squared_error, r2_score)
+from sklearn.ensemble import BaggingRegressor, RandomForestRegressor,StackingRegressor,GradientBoostingRegressor
+from sklearn.linear_model import LassoCV
 
 
 def cross_validation(model, X, y, nFolds):
@@ -142,3 +145,27 @@ def evaluate_regression_metrics(y_test, y_train, y_pred, y_pred_train):
         "R² Score Test:": r2_score(y_test, y_pred),
         "R² Score Train:": r2_score(y_train, y_pred_train),
     }
+
+
+
+
+def get_pred_Model_1(X_train,y_train,X_test):
+    base_models = [
+        ('gbr', GradientBoostingRegressor(n_estimators=50,max_features=0.8,subsample=0.9,random_state=42)),
+        ('RF', RandomForestRegressor(random_state=42,n_estimators=100,max_features=0.8) ),
+        ('bag', BaggingRegressor(random_state=42,n_estimators=100))
+    ]
+    model = StackingRegressor(estimators=base_models, final_estimator=LassoCV(), cv=5, passthrough=True)
+    model.fit(X_train,y_train)
+    predictions = model.predict(X_test)
+    return predictions
+
+def get_pred_Model_2(X_train,y_train,X_test):
+    base_models = [
+    ('gbr', GradientBoostingRegressor(n_estimators=100,max_features=0.8,subsample=0.5,random_state=42)),
+    ('RF', RandomForestRegressor(random_state=42,n_estimators=200,max_features=0.8) ),
+    ('bag', BaggingRegressor(random_state=42,n_estimators=200))]
+    model = StackingRegressor(estimators=base_models, final_estimator=LassoCV(), cv=5, passthrough=True)
+    model.fit(X_train,y_train)
+    predictions = model.predict(X_test)
+    return predictions

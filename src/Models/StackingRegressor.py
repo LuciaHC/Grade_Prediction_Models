@@ -4,6 +4,16 @@ from utils import evaluate_regression_metrics
 from sklearn.metrics import (mean_absolute_error, mean_squared_error, r2_score)
 
 
+"""
+Definition of the model (since we haven't seen it in class):
+
+A Stacking Regressor combines multiple base regression models (estimators), whose predictions are used as inputs for a meta-model.
+Each base model is trained on the original training set, while the meta-model is trained on the out-of-sample predictions generated via cross-validation of the base models.
+This enables the meta-model to learn how to effectively combine the base predictions to minimize the overall error.
+
+To better understand the flow of this model, I have introduced a picture in my final paper.
+"""
+
 class StackRegressor:
     """
     Stacking regressor using 2 layers. It is trained to optimally combine the model predictions to form a new set of predictions.
