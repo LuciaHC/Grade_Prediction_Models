@@ -1,4 +1,4 @@
-# 📌 Final Project: Machine Learning  
+# 📌 Machine Learning  
 
 ## 📅 Date: [04/05/2025]  
 **Author:** Lucía Herraiz Cano  
@@ -16,6 +16,7 @@ This repository contains two predictive models designed to estimate students' gr
 2. [⚙️] [Installation and Execution](#installation-and-execution)  
 3. [📊] [Module Distribution](#module-distribution)
 4. [🚀] [Results and Conclusions](#results-and-conclusions)  
+5. [📄] [License](#license)
 
 
 ---  
@@ -78,4 +79,9 @@ The project is divided in the following modules (inside \src folder):
 
 All of the results and the conclusions of this proyect (in Spanish) can be consulted in the document *Informe.pdf*
 
+---
+
+## 📄 <span id="license">License</span>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

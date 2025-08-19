@@ -6,7 +6,7 @@ import seaborn as sns
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     mean_absolute_error, mean_squared_error, r2_score)
-from sklearn.ensemble import BaggingRegressor, RandomForestRegressor,StackingRegressor,GradientBoostingRegressor
+from sklearn.ensemble import BaggingRegressor, RandomForestRegressor, StackingRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LassoCV
 
 
@@ -65,7 +65,7 @@ def plot_residuals_color(X, y, predictions, columns_to_plot, categorical_var=Non
         predictions: predictions of the model
         columns_to_plot: columns to plot
         categorical_var (str, optional): variable to set the color. Defaults to None.
-    """    
+    """
 
     residuals = y - predictions
 
@@ -147,25 +147,50 @@ def evaluate_regression_metrics(y_test, y_train, y_pred, y_pred_train):
     }
 
 
+def get_pred_Model_1(X_train, y_train, X_test):
+    """Get predictions from Model 1.
 
+    Args:
+        X_train (array-like): Training features.
+        y_train (array-like): Training labels.
+        X_test (array-like): Test features.
 
-def get_pred_Model_1(X_train,y_train,X_test):
+    Returns:
+        array-like: Model predictions.
+    """
     base_models = [
-        ('gbr', GradientBoostingRegressor(n_estimators=50,max_features=0.8,subsample=0.9,random_state=42)),
-        ('RF', RandomForestRegressor(random_state=42,n_estimators=100,max_features=0.8) ),
-        ('bag', BaggingRegressor(random_state=42,n_estimators=100))
+        ('gbr', GradientBoostingRegressor(n_estimators=50,
+         max_features=0.8, subsample=0.9, random_state=42)),
+        ('RF', RandomForestRegressor(random_state=42,
+         n_estimators=100, max_features=0.8)),
+        ('bag', BaggingRegressor(random_state=42, n_estimators=100))
     ]
-    model = StackingRegressor(estimators=base_models, final_estimator=LassoCV(), cv=5, passthrough=True)
-    model.fit(X_train,y_train)
+    model = StackingRegressor(estimators=base_models,
+                              final_estimator=LassoCV(), cv=5, passthrough=True)
+    model.fit(X_train, y_train)
     predictions = model.predict(X_test)
     return predictions
 
-def get_pred_Model_2(X_train,y_train,X_test):
+
+def get_pred_Model_2(X_train, y_train, X_test):
+    """Get predictions from Model 2.
+
+    Args:
+        X_train (array-like): Training features.
+        y_train (array-like): Training labels.
+        X_test (array-like): Test features.
+
+    Returns:
+        array-like: Model predictions.
+    """
     base_models = [
-    ('gbr', GradientBoostingRegressor(n_estimators=100,max_features=0.8,subsample=0.5,random_state=42)),
-    ('RF', RandomForestRegressor(random_state=42,n_estimators=200,max_features=0.8) ),
-    ('bag', BaggingRegressor(random_state=42,n_estimators=200))]
-    model = StackingRegressor(estimators=base_models, final_estimator=LassoCV(), cv=5, passthrough=True)
-    model.fit(X_train,y_train)
+        ('gbr', GradientBoostingRegressor(n_estimators=100,
+         max_features=0.8, subsample=0.5, random_state=42)),
+        ('RF', RandomForestRegressor(random_state=42,
+         n_estimators=200, max_features=0.8)),
+        ('bag', BaggingRegressor(random_state=42, n_estimators=200))]
+    model = StackingRegressor(estimators=base_models,
+                              final_estimator=LassoCV(), cv=5, passthrough=True)
+    model.fit(X_train, y_train)
     predictions = model.predict(X_test)
     return predictions
